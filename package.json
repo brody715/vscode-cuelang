@@ -2,7 +2,7 @@
 	"name": "vscode-cuelang",
 	"displayName": "vscode-cuelang",
 	"description": "Language support for Cue",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"author": {
 		"name": "brody715"
 	},
@@ -16,7 +16,7 @@
 		"Programming Languages"
 	],
 	"repository": {
-		"url": "github.com/brody715/vscode-cuelang"
+		"url": "https://github.com/brody715/vscode-cuelang"
 	},
 	"contributes": {
 		"languages": [
