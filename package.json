@@ -1,0 +1,74 @@
+{
+	"name": "vscode-cuelang",
+	"displayName": "vscode-cuelang",
+	"description": "Language support for Cue",
+	"version": "0.0.1",
+	"author": {
+		"name": "brody715"
+	},
+	"publisher": "brody715",
+	"engines": {
+		"vscode": "^1.50.0"
+	},
+	"icon": "images/cue.png",
+	"license": "MIT",
+	"categories": [
+		"Programming Languages"
+	],
+	"repository": {
+		"url": "github.com/brody715/vscode-cuelang"
+	},
+	"contributes": {
+		"languages": [
+			{
+				"id": "cue",
+				"aliases": [
+					"cue",
+					"Cue"
+				],
+				"extensions": [
+					".cue"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "cue",
+				"scopeName": "source.cue",
+				"path": "./syntaxes/cue.tmLanguage.json"
+			}
+		]
+	},
+	"scripts": {
+		"vscode:prepublish": "yarn run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"pretest": "yarn run compile && yarn run lint",
+		"lint": "eslint src --ext ts",
+		"test": "node ./out/test/runTest.js",
+		"sync-syntax": " wget https://raw.githubusercontent.com/shikijs/shiki/main/packages/shiki/languages/cue.tmLanguage.json -O syntaxes/cue.tmLanguage.json"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.50.0",
+		"@types/glob": "^7.2.0",
+		"@types/mocha": "^9.1.1",
+		"@types/node": "16.x",
+		"@typescript-eslint/eslint-plugin": "^5.27.0",
+		"@typescript-eslint/parser": "^5.27.0",
+		"eslint": "^8.16.0",
+		"glob": "^8.0.3",
+		"mocha": "^10.0.0",
+		"typescript": "^4.7.2",
+		"@vscode/test-electron": "^2.1.3"
+	},
+	"__metadata": {
+		"id": "ec749621-363b-4d8e-ba1b-9ce3204f085e",
+		"publisherDisplayName": "brody715",
+		"publisherId": "0fe54e16-1486-461c-99c7-f1931d62764f",
+		"isPreReleaseVersion": false,
+		"targetPlatform": "undefined",
+		"updated": false,
+		"preRelease": false
+	}
+}
