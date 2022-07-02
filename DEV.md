@@ -1,3 +1,6 @@
+## Convention
+
+The structure of project follows [golang/vscode-go](https://github.com/golang/vscode-go/)
 
 ## Publish Extension
 

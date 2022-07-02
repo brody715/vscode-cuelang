@@ -2,7 +2,7 @@
 	"name": "vscode-cuelang",
 	"displayName": "vscode-cuelang",
 	"description": "Language support for Cue",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"author": {
 		"name": "brody715"
 	},
@@ -12,12 +12,21 @@
 	},
 	"icon": "images/cue.png",
 	"license": "MIT",
-	"categories": [
-		"Programming Languages"
-	],
 	"repository": {
 		"url": "https://github.com/brody715/vscode-cuelang"
 	},
+	"categories": [
+		"Programming Languages",
+		"Formatters"
+	],
+	"keywords": [
+		"CUE",
+		"cue"
+	],
+	"activationEvents": [
+		"onLanguage:cue"
+	],
+	"main": "./dist/extension.js",
 	"contributes": {
 		"languages": [
 			{
@@ -38,29 +47,87 @@
 				"scopeName": "source.cue",
 				"path": "./syntaxes/cue.tmLanguage.json"
 			}
-		]
+		],
+		"commands": [
+			{
+				"command": "cue.lint.file",
+				"title": "Cue: Lint Current File"
+			},
+			{
+				"command": "cue.eval.file.cue",
+				"title": "Cue: Evaluate Current File to Cue"
+			},
+			{
+				"command": "cue.eval.file.expression.cue",
+				"title": "Cue: Evaluate Expression(s) in Current File to Cue"
+			},
+			{
+				"command": "cue.eval.file",
+				"title": "Cue: Evaluate Current File to <type>"
+			},
+			{
+				"command": "cue.eval.file.expression",
+				"title": "Cue: Evaluate Expression(s) in Current File to <type>"
+			}
+		],
+		"configuration": {
+			"type": "object",
+			"title": "Cue",
+			"properties": {
+				"cue.lintOnSave": {
+					"type": "string",
+					"enum": [
+						"file",
+						"off"
+					],
+					"enumDescriptions": [
+						"lint the current file on file saving",
+						"do not run lint automatically"
+					],
+					"default": "file",
+					"description": "Lints code on file using `cue`",
+					"scope": "resource"
+				},
+				"cue.lintFlags": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [],
+					"description": "Flags to pass to `cue vet` (e.g. [\"-c\"])",
+					"scope": "resource"
+				}
+			}
+		}
 	},
 	"scripts": {
 		"vscode:prepublish": "yarn run compile",
-		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./",
-		"pretest": "yarn run compile && yarn run lint",
+		"compile": "webpack",
+		"watch": "webpack --watch",
+		"package": "webpack --mode production --devtool hidden-source-map",
+		"compile-tests": "tsc -p . --outDir out",
+		"watch-tests": "tsc -p . -w --outDir out",
+		"test": "yarn run compile-tests && node ./out/test/runTest.js",
+		"pretest": "yarn run compile-tests && yarn run compile && yarn run lint",
 		"lint": "eslint src --ext ts",
-		"test": "node ./out/test/runTest.js",
 		"sync-syntax": " wget https://raw.githubusercontent.com/shikijs/shiki/main/packages/shiki/languages/cue.tmLanguage.json -O syntaxes/cue.tmLanguage.json"
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.50.0",
 		"@types/glob": "^7.2.0",
+		"@types/hasbin": "^1.2.0",
 		"@types/mocha": "^9.1.1",
 		"@types/node": "16.x",
+		"@types/vscode": "^1.50.0",
 		"@typescript-eslint/eslint-plugin": "^5.27.0",
 		"@typescript-eslint/parser": "^5.27.0",
+		"@vscode/test-electron": "^2.1.3",
 		"eslint": "^8.16.0",
 		"glob": "^8.0.3",
 		"mocha": "^10.0.0",
+		"ts-loader": "^9.3.0",
 		"typescript": "^4.7.2",
-		"@vscode/test-electron": "^2.1.3"
+		"webpack": "^5.72.1",
+		"webpack-cli": "^4.9.2"
 	},
 	"__metadata": {
 		"id": "ec749621-363b-4d8e-ba1b-9ce3204f085e",
@@ -70,5 +137,8 @@
 		"targetPlatform": "undefined",
 		"updated": false,
 		"preRelease": false
+	},
+	"dependencies": {
+		"hasbin": "^1.2.3"
 	}
 }
