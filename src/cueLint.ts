@@ -1,0 +1,94 @@
+import {CommandFactory} from "./commands";
+import * as util from "./util";
+import * as vscode from "vscode";
+
+// Handler for command `cue.lint.*`
+export function createCommandCueLint(
+  diagnosticCollection: vscode.DiagnosticCollection
+): CommandFactory {
+  return (ctx) => async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showInformationMessage(
+        "No active editor, open a cue file first"
+      );
+      return;
+    }
+    if (editor.document.languageId !== "cue") {
+      vscode.window.showInformationMessage("Active editor is not a cue file");
+      return;
+    }
+
+    const document = editor.document;
+    const lintFlags: string[] =
+      util.getCueConfig(document.uri).get("lintFlags") || [];
+    await cueLint(document, diagnosticCollection, lintFlags);
+  };
+}
+
+export async function cueLint(
+  document: vscode.TextDocument,
+  diagCollection: vscode.DiagnosticCollection,
+  lintFlags: string[]
+) {
+  const {stderr} = await util.runCue([
+    "vet",
+    document.uri.fsPath,
+    ...lintFlags,
+  ]);
+  const diagnostics = handleDiagnosticMessages(stderr);
+  diagCollection.set(document.uri, diagnostics);
+}
+
+export function handleDiagnosticMessages(content: string): vscode.Diagnostic[] {
+  // we also ignore empty lines
+  const lines = content.split(/[\r?\n]+/);
+  if (lines.length === 0) {
+    return [];
+  }
+
+  // Valid Error Message is Like
+  // expected operand, found 'EOF':
+  //     ./examples/simple1.cue:7:3
+
+  // <error-message>:
+  //     <file-path>:<line-number>:<column-number>
+  //     <file-path>:<line-number>:<column-number>
+  //     ...
+  const diagnostics: vscode.Diagnostic[] = [];
+
+  let errorMsg = "";
+  const re = /^.+:(\d+):(\d+)$/;
+
+  for (const line of lines) {
+    // type: error location
+    if (line.startsWith("  ")) {
+      // '    <file-path>:<line-number>:<column-number>'
+      const m = re.exec(line);
+      if (m) {
+        const lineNo = parseInt(m[1]) - 1;
+        const columnNo = parseInt(m[2]);
+        const range = new vscode.Range(
+          new vscode.Position(lineNo, columnNo),
+          new vscode.Position(lineNo, columnNo)
+        );
+        diagnostics.push({
+          message: errorMsg,
+          range,
+          severity: vscode.DiagnosticSeverity.Error,
+        });
+      }
+      continue;
+    }
+
+    // type: error message
+    const msg = line.trim();
+    // not empty line
+    if (msg.length !== 0) {
+      // remove last colon `xxx:` -> `xxx`
+      errorMsg = msg.substring(0, msg.length - 1);
+    }
+  }
+
+  return diagnostics;
+}
