@@ -1,0 +1,131 @@
+# derived from https://github.com/golang/vscode-go/blob/master/.github/workflows/release.yml
+
+name: Release Extension
+
+on:
+  push:
+    tags:
+      # git push --tags
+      - 'v*'
+  workflow_dispatch: {}
+
+jobs:
+  package:
+    if: github.repository == 'brody715/vscode-cuelang'
+    runs-on: ubuntu-latest
+    outputs:
+      vsixPath: ${{ steps.package_extension.outputs.vsixPath }}
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v3
+
+      - name: setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: setup yarn
+        run: npm install -g yarn
+
+      - name: setup yarn cache
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          cache: yarn
+
+      - name: check release version
+        id: release_version
+        run: |
+          TAGGED_VERSION="${GITHUB_REF/refs\/tags\/v/}"
+          if [[ ! "${TAGGED_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
+            echo "Invalid version tag '${TAGGED_VERSION}'"
+            exit 1
+          fi
+          WRITTEN_VERSION="$(cat package.json | jq '.version' -r)"
+          if [[ "${TAGGED_VERSION}" != "${WRITTEN_VERSION}" ]]; then
+            echo "Release Tag and Version in package.json do not match: '${TAGGED_VERSION}' vs '${WRITTEN_VERSION}'"
+            exit 1
+          fi
+          echo "EXT_VERSION=${TAGGED_VERSION}" >> $GITHUB_ENV
+
+      - name: install
+        run: |
+          yarn install --immutable --immutable-cache --check-cache
+
+      # only package
+      - name: package extension
+        uses: HaaLeo/publish-vscode-extension@v1
+        id: package_extension
+        with:
+          pat: 'xxx'
+          yarn: true
+          dryRun: true
+
+      - name: upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: vscode-cuelang-${{ env.GITHUB_SHA }}
+          path: ${{ steps.package_extension.outputs.vsixPath }}
+          retention-days: 3
+
+  release:
+    if: github.repository == 'brody715/vscode-cuelang'
+    needs: package
+    environment: production
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v3
+
+      # download artifacts
+      - name: download artifact
+        id: download
+        uses: actions/download-artifact@v3
+        with:
+          name: vscode-cuelang-${{ env.GITHUB_SHA }}
+
+      - name: check artifact
+        if: ${{ secrets.CI_LOCAL_TEST == 1 }}
+        env:
+          EXT_PATH: ${{ needs.package.outputs.vsixPath }}
+        run: |
+          echo ${EXT_PATH}
+
+      - name: create release
+        if: ${{ secrets.CI_LOCAL_TEST != 1 }}
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ env.EXT_VERSION }}
+          draft: false
+
+      - name: upload release asset
+        if: ${{ secrets.CI_LOCAL_TEST != 1 }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ needs.package.outputs.vsixPath }}
+          asset_name: vscode-cuelang-${{ env.EXT_VERSION }}.vsix
+          asset_content_type: application/zip
+
+      - name: Publish to Open VSX Registry
+        if: ${{ secrets.CI_LOCAL_TEST != 1 }}
+        uses: HaaLeo/publish-vscode-extension@v1
+        with:
+          yarn: true
+          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+          extensionFile: ${{ needs.package.outputs.vsixPath }}
+
+      - name: Publish to Visual Studio Marketplace
+        if: ${{ secrets.CI_LOCAL_TEST != 1 }}
+        uses: HaaLeo/publish-vscode-extension@v1
+        with:
+          yarn: true
+          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+          registryUrl: https://marketplace.visualstudio.com
+          extensionFile: ${{ needs.package.outputs.vsixPath }}
