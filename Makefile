@@ -8,5 +8,5 @@ workflow-run-test:
 
 workflow-run-release:
 	@mkdir -p .local
-	@echo '{"ref": "refs/tags/v0.0.3"}' > .local/tag-event.json
+	@echo '{"ref": "refs/tags/v0.0.3-rc.1"}' > .local/tag-event.json
 	${ACT_CMD} -e .local/tag-event.json -s CI_LOCAL_TEST=1 --artifact-server-path=.local/artifacts
