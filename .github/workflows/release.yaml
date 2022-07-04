@@ -53,7 +53,7 @@ jobs:
           yarn install --immutable --immutable-cache --check-cache
 
       # only package
-      - name: package extensio
+      - name: package extension
         uses: HaaLeo/publish-vscode-extension@v1
         id: package_extension
         with:
