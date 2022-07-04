@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       vsixPath: ${{ steps.package_extension.outputs.vsixPath }}
+      extVersion: ${{ steps.release_version.outputs.extVersion }}
     steps:
       - name: checkout code
         uses: actions/checkout@v3
@@ -41,12 +42,30 @@ jobs:
             echo "Invalid version tag '${TAGGED_VERSION}'"
             exit 1
           fi
-          WRITTEN_VERSION="$(cat package.json | jq '.version' -r)"
-          if [[ "${TAGGED_VERSION}" != "${WRITTEN_VERSION}" ]]; then
-            echo "Release Tag and Version in package.json do not match: '${TAGGED_VERSION}' vs '${WRITTEN_VERSION}'"
-            exit 1
-          fi
           echo "EXT_VERSION=${TAGGED_VERSION}" >> $GITHUB_ENV
+          WRITTEN_VERSION="$(cat package.json | jq '.version' -r)"
+          if [[ "${TAGGED_VERSION}" == *"-"* ]]; then
+            if [[ ! "${TAGGED_VERSION}" == "${WRITTEN_VERSION}"-rc.* ]]; then
+              echo "Prerelease Tag and Version in package.json are not compatible: '${TAGGED_VERSION}' vs '${WRITTEN_VERSION}'"
+              exit 1
+            fi
+            echo "EXT_ISPREVIEW=1" >> $GITHUB_ENV
+          else
+            if [[ "${TAGGED_VERSION}" != "${WRITTEN_VERSION}" ]]; then
+              echo "Release Tag and Version in package.json do not match: '${TAGGED_VERSION}' vs '${WRITTEN_VERSION}'"
+              exit 1
+            fi
+            echo "EXT_ISPREVIEW=0" >> $GITHUB_ENV
+          fi
+
+          # Save in outputs
+          echo "::set-output name=extVersion::${TAGGED_VERSION}"
+          echo "::set-output name=extIsPreview::${EXT_ISPREVIEW}"
+
+      - name: stamp version
+        run: |
+          cat package.json | jq --arg VER "${{ env.EXT_VERSION }}" '.version=$VER' > /tmp/package.json 
+          cp /tmp/package.json ./package.json
 
       - name: install
         run: |
@@ -73,6 +92,9 @@ jobs:
     needs: package
     environment: production
     runs-on: ubuntu-latest
+    env:
+      EXT_VERSION: ${{ needs.package.outputs.extVersion }}
+      EXT_ISPREVIEW: ${{ needs.package.outputs.extIsPreview }}
     steps:
       - name: checkout code
         uses: actions/checkout@v3
@@ -84,15 +106,13 @@ jobs:
         with:
           name: vscode-cuelang-${{ env.GITHUB_SHA }}
 
-      - name: check artifact
-        if: ${{ secrets.CI_LOCAL_TEST == 1 }}
-        env:
-          EXT_PATH: ${{ needs.package.outputs.vsixPath }}
+      - name: stamp version
         run: |
-          echo ${EXT_PATH}
+          echo "EXT_VERSION=${{ env.EXT_VERSION }}"
+          cat package.json | jq --arg VER "${{ env.EXT_VERSION }}" '.version=$VER' > /tmp/package.json 
+          cp /tmp/package.json ./package.json
 
       - name: create release
-        if: ${{ secrets.CI_LOCAL_TEST != 1 }}
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -103,7 +123,6 @@ jobs:
           draft: false
 
       - name: upload release asset
-        if: ${{ secrets.CI_LOCAL_TEST != 1 }}
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -114,7 +133,6 @@ jobs:
           asset_content_type: application/zip
 
       - name: Publish to Open VSX Registry
-        if: ${{ secrets.CI_LOCAL_TEST != 1 }}
         uses: HaaLeo/publish-vscode-extension@v1
         with:
           yarn: true
@@ -122,7 +140,6 @@ jobs:
           extensionFile: ${{ needs.package.outputs.vsixPath }}
 
       - name: Publish to Visual Studio Marketplace
-        if: ${{ secrets.CI_LOCAL_TEST != 1 }}
         uses: HaaLeo/publish-vscode-extension@v1
         with:
           yarn: true
