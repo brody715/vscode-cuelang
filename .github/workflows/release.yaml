@@ -136,7 +136,7 @@ jobs:
         uses: HaaLeo/publish-vscode-extension@v1
         with:
           yarn: true
-          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+          pat: ${{ secrets.OPEN_VSX_TOKEN }}
           extensionFile: ${{ needs.package.outputs.vsixPath }}
 
       - name: Publish to Visual Studio Marketplace
