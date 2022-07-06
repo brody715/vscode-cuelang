@@ -19,8 +19,14 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [v0.0.3] - 2022-07-03
 
-## Added
+### Added
 
 - Code formatting
 - Naive lint
 - Evaluation preview
+
+## [v0.0.4] - 2022-07-06
+
+### Fixed
+
+- Unexpcted lint error when import packages

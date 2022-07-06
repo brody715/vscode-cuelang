@@ -1,5 +1,9 @@
 import assert = require("assert");
-import {handleDiagnosticMessages} from "../../cueLint";
+import {cueLint, handleDiagnosticMessages} from "../../cueLint";
+
+import {Uri, workspace} from "vscode";
+import * as vscode from "vscode";
+import path = require("path");
 
 suite("handleDiagnosticMessages Tests", () => {
   test("ignore single line", () => {
@@ -23,5 +27,12 @@ suite("handleDiagnosticMessages Tests", () => {
     assert.equal(diagnostics[1].message, "expected operand, found 'EOF'");
     assert.equal(diagnostics[1].range.end.line, 11);
     assert.equal(diagnostics[1].range.end.character, 5);
+  });
+});
+
+suite("cueLint Tests", () => {
+  test("should not error on import", async () => {
+    const fixtureDir = path.join(__dirname, "../testdata/module1");
+    // TODO: add tests
   });
 });

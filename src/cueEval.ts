@@ -1,8 +1,9 @@
 import {CommandFactory} from "./commands";
 import * as vscode from "vscode";
-import * as util from "./util";
+import * as utils from "./utils";
 import path = require("path");
 import fsp = require("fs/promises");
+import {isCueNotFoundError} from "./error";
 
 export const OUT_TYPE_VALUES = ["yaml", "json", "text", "cue"] as const;
 export type OutType = typeof OUT_TYPE_VALUES[number];
@@ -74,7 +75,7 @@ export function createCommandCueEval(opts: {
 
       // TODO: dispose the temp dir
       // create temp dir
-      const {path: tmpDir} = util.makeTempDir("eval");
+      const {path: tmpDir} = utils.makeTempDir("eval");
 
       const tmpFile = path.join(tmpDir, `eval.${outTypeToExt(outType)}`);
       await fsp.writeFile(tmpFile, content);
@@ -83,8 +84,11 @@ export function createCommandCueEval(opts: {
         viewColumn: vscode.ViewColumn.Beside,
       });
     } catch (e) {
+      if (isCueNotFoundError(e)) {
+        throw e;
+      }
       vscode.window.showErrorMessage(
-        `failed to evaluate file, error: ${(e as Error).message}`
+        `Failed to evaluate file, error: ${(e as Error).message}`
       );
     }
   };
@@ -111,7 +115,9 @@ export async function cueEval(opts: {
     args.push(`--out`, opts.outType);
   }
 
-  const {stdout, stderr, code} = await util.runCue(args);
+  const {stdout, stderr, code} = await utils.runCue(args, {
+    cwd: utils.getConfigModuleRoot(),
+  });
   if (code !== 0) {
     throw new Error(
       `run command "cue ${args.join(" ")}" failed, stderr: ${stderr}`

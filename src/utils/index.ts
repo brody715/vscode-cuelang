@@ -6,6 +6,11 @@ import cp = require("child_process");
 import fs = require("fs");
 import path = require("path");
 import os = require("os");
+import process = require("process");
+import {CueNotFoundError} from "../error";
+import {vscodeVariables} from "./vscode_variables";
+
+export {vscodeVariables} from "./vscode_variables";
 
 export function getCueConfig(uri?: vscode.Uri): vscode.WorkspaceConfiguration {
   return getConfig("cue", uri);
@@ -23,6 +28,18 @@ export function getConfig(
     }
   }
   return vscode.workspace.getConfiguration(section, uri);
+}
+
+export function getConfigModuleRoot(uri?: vscode.Uri): string {
+  let moduleRoot: string =
+    getCueConfig(uri).get("moduleRoot") || "${workspaceFolder}";
+
+  moduleRoot = vscodeVariables(moduleRoot, false);
+  if (!moduleRoot) {
+    moduleRoot = process.cwd();
+  }
+
+  return moduleRoot as string;
 }
 
 export function hasBinCue(): Promise<boolean> {
@@ -69,8 +86,9 @@ export function runCue(
     child.on("error", (err) => {
       if (err && (err as any).code === "ENOENT") {
         promptNoCue();
-        reject(err);
+        reject(new CueNotFoundError(err.message));
       }
+      reject(err);
     });
     child.on("close", (code) => {
       output.code = code || 0;
@@ -113,4 +131,30 @@ export function cleanupTempDir() {
     }
   }
   tmpDir = undefined;
+}
+
+export function dirBaseName(p: string): {
+  dir: string;
+  basename: string;
+} {
+  return {
+    dir: path.dirname(p),
+    basename: path.basename(p),
+  };
+}
+
+export function isErrorWithMessage(error: unknown): error is {message: string} {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof (error as Record<string, unknown>).message === "string"
+  );
+}
+
+export function extractErrorMessage(e: unknown): string {
+  if (isErrorWithMessage(e)) {
+    return e.message;
+  }
+  return String(e);
 }

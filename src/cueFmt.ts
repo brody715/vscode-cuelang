@@ -1,10 +1,9 @@
 import * as vscode from "vscode";
-import * as util from "./util";
+import * as utils from "./utils";
 
-import cp = require("child_process");
-import os = require("os");
 import fsp = require("fs/promises");
 import path = require("path");
+import {isCueNotFoundError} from "./error";
 
 export class CueDocumentFormattingEditProvider
   implements vscode.DocumentFormattingEditProvider
@@ -16,11 +15,11 @@ export class CueDocumentFormattingEditProvider
   ): vscode.ProviderResult<vscode.TextEdit[]> {
     // Promise to thenable
     const fn = async (): Promise<vscode.TextEdit[]> => {
-      if (!util.isVisibleDocument(document)) {
+      if (!utils.isVisibleDocument(document)) {
         return [];
       }
 
-      const tmpDir = util.makeTempDir();
+      const tmpDir = utils.makeTempDir();
       try {
         const tmpFile = path.join(
           tmpDir.path,
@@ -29,7 +28,7 @@ export class CueDocumentFormattingEditProvider
         await fsp.writeFile(tmpFile, document.getText());
 
         // run cue fmt
-        await util.runCue(["fmt", tmpFile]);
+        await utils.runCue(["fmt", tmpFile]);
 
         // read the output file
         const output = await fsp.readFile(tmpFile, "utf8");
@@ -39,9 +38,18 @@ export class CueDocumentFormattingEditProvider
         return [
           new vscode.TextEdit(new vscode.Range(fileStart, fileEnd), output),
         ];
+      } catch (e) {
+        if (isCueNotFoundError(e)) {
+          throw e;
+        }
+        vscode.window.showErrorMessage(
+          `Failed to format document: ${utils.extractErrorMessage(e)}`
+        );
       } finally {
         tmpDir.dispose();
       }
+
+      return [];
     };
     return fn();
   }
