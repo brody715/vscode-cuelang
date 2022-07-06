@@ -5,7 +5,7 @@ import {createRegisterCommand} from "./commands";
 import {createCommandCueEval} from "./cueEval";
 import {CueDocumentFormattingEditProvider} from "./cueFmt";
 import {createCommandCueLint, cueLint} from "./cueLint";
-import * as util from "./util";
+import * as utils from "./utils";
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -27,7 +27,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // == related lint on save ==
   const lintOnSave = async (document: vscode.TextDocument) => {
     if (document.languageId === "cue") {
-      const cueConfig = util.getCueConfig(document.uri);
+      const cueConfig = utils.getCueConfig(document.uri);
       const lintOnSave = cueConfig.get("lintOnSave");
       const lintFlags: string[] = cueConfig.get("lintFlags") || [];
 
@@ -101,5 +101,5 @@ export async function activate(context: vscode.ExtensionContext) {
 
 // this method is called when your extension is deactivated
 export function deactivate() {
-  util.cleanupTempDir();
+  utils.cleanupTempDir();
 }

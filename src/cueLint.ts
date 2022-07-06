@@ -1,6 +1,7 @@
 import {CommandFactory} from "./commands";
-import * as util from "./util";
+import * as utils from "./utils";
 import * as vscode from "vscode";
+import {isCueNotFoundError} from "./error";
 
 // Handler for command `cue.lint.*`
 export function createCommandCueLint(
@@ -21,7 +22,7 @@ export function createCommandCueLint(
 
     const document = editor.document;
     const lintFlags: string[] =
-      util.getCueConfig(document.uri).get("lintFlags") || [];
+      utils.getCueConfig(document.uri).get("lintFlags") || [];
     await cueLint(document, diagnosticCollection, lintFlags);
   };
 }
@@ -31,13 +32,21 @@ export async function cueLint(
   diagCollection: vscode.DiagnosticCollection,
   lintFlags: string[]
 ) {
-  const {stderr} = await util.runCue([
-    "vet",
-    document.uri.fsPath,
-    ...lintFlags,
-  ]);
-  const diagnostics = handleDiagnosticMessages(stderr);
-  diagCollection.set(document.uri, diagnostics);
+  try {
+    const {stderr} = await utils.runCue(
+      ["vet", document.uri.fsPath, ...lintFlags],
+      {cwd: utils.getConfigModuleRoot()}
+    );
+    const diagnostics = handleDiagnosticMessages(stderr);
+    diagCollection.set(document.uri, diagnostics);
+  } catch (e) {
+    if (isCueNotFoundError(e)) {
+      throw e;
+    }
+    vscode.window.showErrorMessage(
+      `Failed to lint file, error: ${(e as Error).message}`
+    );
+  }
 }
 
 export function handleDiagnosticMessages(content: string): vscode.Diagnostic[] {

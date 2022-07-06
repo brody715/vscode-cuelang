@@ -2,7 +2,7 @@
 	"name": "vscode-cuelang",
 	"displayName": "vscode-cuelang",
 	"description": "Language support for Cue",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"author": {
 		"name": "brody715"
 	},
@@ -95,6 +95,12 @@
 					},
 					"default": [],
 					"description": "Flags to pass to `cue vet` (e.g. [\"-c\"])",
+					"scope": "resource"
+				},
+				"cue.moduleRoot": {
+					"type": "string",
+					"default": "${workspaceFolder}",
+					"description": "Root directory contains cue.mod, used to resolve modules, default ${workspaceFolder}. The linter may produce some errors, when folder contains nested cue.mod",
 					"scope": "resource"
 				}
 			}

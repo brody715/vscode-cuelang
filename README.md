@@ -40,7 +40,8 @@ You can input expressions, or select different output types that CUE supported.
 ```json
 {
   "cue.lintOnSave": "file", // or "off"
-  "cue.lintFlags": [] // e.g. ["-c"]
+  "cue.lintFlags": [], // e.g. ["-c"]
+  "cue.moduleRoot": "${workspaceFolder}" // used to resolve modules
 }
 ```
 
