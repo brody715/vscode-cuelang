@@ -9,7 +9,7 @@ suite("handleDiagnosticMessages Tests", () => {
   test("ignore single line", () => {
     const content =
       "some instances are incomplete; use the -c flag to show errors or suppress this message";
-    const diagnostics = handleDiagnosticMessages(content);
+    const diagnostics = handleDiagnosticMessages("./examples/simple1.cue", content);
     assert.equal(diagnostics.length, 0);
   });
 
@@ -19,7 +19,7 @@ suite("handleDiagnosticMessages Tests", () => {
       "    ./examples/simple1.cue:7:3\n" +
       "    ./examples/simple1.cue:12:5";
 
-    const diagnostics = handleDiagnosticMessages(content);
+    const diagnostics = handleDiagnosticMessages("./examples/simple1.cue", content);
     assert.equal(diagnostics.length, 2);
     assert.equal(diagnostics[0].message, "expected operand, found 'EOF'");
     assert.equal(diagnostics[0].range.start.line, 6);

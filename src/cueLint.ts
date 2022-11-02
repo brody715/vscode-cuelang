@@ -2,6 +2,8 @@ import {CommandFactory} from "./commands";
 import * as utils from "./utils";
 import * as vscode from "vscode";
 import {isCueNotFoundError} from "./error";
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Handler for command `cue.lint.*`
 export function createCommandCueLint(
@@ -34,10 +36,10 @@ export async function cueLint(
 ) {
   try {
     const {stderr} = await utils.runCue(
-      ["vet", document.uri.fsPath, ...lintFlags],
+      ["vet", ...getAllFiles(document.uri.fsPath), ...lintFlags],
       {cwd: utils.getConfigModuleRoot()}
     );
-    const diagnostics = handleDiagnosticMessages(stderr);
+    const diagnostics = handleDiagnosticMessages(vscode.workspace.asRelativePath(document.uri.fsPath), stderr);
     diagCollection.set(document.uri, diagnostics);
   } catch (e) {
     if (isCueNotFoundError(e)) {
@@ -49,7 +51,12 @@ export async function cueLint(
   }
 }
 
-export function handleDiagnosticMessages(content: string): vscode.Diagnostic[] {
+function getAllFiles(fsPath: string): string[] {
+  const folder = path.dirname(fsPath);
+  return fs.readdirSync(folder, { withFileTypes: true }).filter(file => file.isFile()).map(file => `${folder}\\${file.name}`);
+}
+
+export function handleDiagnosticMessages(file: string, content: string): vscode.Diagnostic[] {
   // we also ignore empty lines
   const lines = content.split(/[\r?\n]+/);
   if (lines.length === 0) {
@@ -67,16 +74,16 @@ export function handleDiagnosticMessages(content: string): vscode.Diagnostic[] {
   const diagnostics: vscode.Diagnostic[] = [];
 
   let errorMsg = "";
-  const re = /^.+:(\d+):(\d+)$/;
+  const re = /(^.+):(\d+):(\d+)$/;
 
   for (const line of lines) {
     // type: error location
     if (line.startsWith("  ")) {
       // '    <file-path>:<line-number>:<column-number>'
       const m = re.exec(line);
-      if (m) {
-        const lineNo = parseInt(m[1]) - 1;
-        const columnNo = parseInt(m[2]);
+      if (m && m[1].replace(/\\/g, "/").endsWith(file)) {
+        const lineNo = parseInt(m[2]) - 1;
+        const columnNo = parseInt(m[3]);
         const range = new vscode.Range(
           new vscode.Position(lineNo, columnNo),
           new vscode.Position(lineNo, columnNo)
