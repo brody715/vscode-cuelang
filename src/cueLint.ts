@@ -1,9 +1,9 @@
-import {CommandFactory} from "./commands";
-import * as utils from "./utils";
-import * as vscode from "vscode";
-import {isCueNotFoundError} from "./error";
 import * as fs from 'fs';
 import * as path from 'path';
+import * as vscode from "vscode";
+import { CommandFactory } from "./commands";
+import { isCueNotFoundError } from "./error";
+import * as utils from "./utils";
 
 // Handler for command `cue.lint.*`
 export function createCommandCueLint(
@@ -36,7 +36,7 @@ export async function cueLint(
 ) {
   try {
     const {stderr} = await utils.runCue(
-      ["vet", ...getAllFiles(document.uri.fsPath), ...lintFlags],
+      ["vet", ...readFiles(path.dirname(document.uri.fsPath)), ...lintFlags],
       {cwd: utils.getConfigModuleRoot()}
     );
     const diagnostics = handleDiagnosticMessages(vscode.workspace.asRelativePath(document.uri.fsPath), stderr);
@@ -51,9 +51,8 @@ export async function cueLint(
   }
 }
 
-function getAllFiles(fsPath: string): string[] {
-  const folder = path.dirname(fsPath);
-  return fs.readdirSync(folder, { withFileTypes: true }).filter(file => file.isFile()).map(file => `${folder}\\${file.name}`);
+function readFiles(dir: string): string[] {
+  return fs.readdirSync(dir, { withFileTypes: true }).filter(file => file.isFile()).map(file => `${dir}\\${file.name}`);
 }
 
 export function handleDiagnosticMessages(file: string, content: string): vscode.Diagnostic[] {
@@ -75,13 +74,14 @@ export function handleDiagnosticMessages(file: string, content: string): vscode.
 
   let errorMsg = "";
   const re = /(^.+):(\d+):(\d+)$/;
+  const isFile = (file: string, expected: string) => file.replace(/\\/g, "/").endsWith(expected);
 
   for (const line of lines) {
     // type: error location
     if (line.startsWith("  ")) {
       // '    <file-path>:<line-number>:<column-number>'
       const m = re.exec(line);
-      if (m && m[1].replace(/\\/g, "/").endsWith(file)) {
+      if (m && isFile(m[1], file)) {
         const lineNo = parseInt(m[2]) - 1;
         const columnNo = parseInt(m[3]);
         const range = new vscode.Range(
